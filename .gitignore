@@ -1,0 +1,76 @@
+# Virtual Environments
+pyannote_env/
+pyannote_env2/
+whisper_env/
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE & Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# Output & Temporary
+output/
+transcript_output/
+*.txt.save
+*.txt~
+diarized_transcript.txt
+
+# Audio Files (too large)
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Environment Variables (SECURITY - never commit tokens!)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Test outputs
+test_transcribe.py.save
+test_*.txt
