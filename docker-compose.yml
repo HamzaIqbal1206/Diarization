@@ -1,0 +1,17 @@
+services:
+  diarization:
+    build: .
+    container_name: whisper-diarization
+    environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+    volumes:
+      # Mount current directory for audio files
+      - ./:/app/audio:ro
+      # Mount output directory
+      - ./output:/app/output
+    working_dir: /app
+    command: python diarize.py
+    # For GPU support (uncomment if you have NVIDIA GPU)
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
