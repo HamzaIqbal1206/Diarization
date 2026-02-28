@@ -1,0 +1,15 @@
+services:
+  whisperx-diarization:
+    build: .
+    container_name: whisperx-diarization
+    environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+      - AUDIO_FILE=/app/audio/sample2.mp3
+      - OUTPUT_FILE=/app/output/diarized_transcript_whisperx.txt
+      - WHISPERX_MODEL=small
+      - LANGUAGE=en
+    volumes:
+      - ./:/app/audio:ro
+      - ./output:/app/output
+    working_dir: /app
+    command: python run_diarization.py

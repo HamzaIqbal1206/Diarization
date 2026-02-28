@@ -17,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY diarize_docker.py diarize.py
+COPY run_diarization.py ./
 
 # Create output directory
 RUN mkdir -p /app/output
@@ -26,4 +26,4 @@ RUN mkdir -p /app/output
 ENV HUGGINGFACE_HUB_TOKEN=""
 
 # Run the application
-CMD ["python", "diarize.py"]
+CMD ["python", "run_diarization.py"]

@@ -1,12 +1,33 @@
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 import os
+from glob import glob
+
+
+def resolve_audio_file() -> str:
+    configured = os.environ.get("AUDIO_FILE", "sample6.m4a")
+    candidates = [
+        configured,
+        os.path.join("/app/audio", configured),
+    ]
+
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+
+    audio_extensions = ("*.mp3", "*.wav", "*.m4a", "*.flac", "*.ogg", "*.aac", "*.aiff")
+    for audio_dir in ["/app/audio", "."]:
+        for ext in audio_extensions:
+            matches = sorted(glob(os.path.join(audio_dir, ext)))
+            if matches:
+                return matches[0]
+
+    return configured
 
 # Configuration
-audio_file = "/app/audio/sample2.mp3"  # Input from mounted volume
-output_dir = "/app/output"  # Output to mounted volume
+audio_file = resolve_audio_file()
 model_size = "base"  # Options: tiny, base, small, medium, large-v2, large-v3
-language = "en"  # Set to None for auto-detection
+language = "ur"  # Set to None for auto-detection
 
 # Get Hugging Face token from environment
 hf_token = os.environ.get("HUGGINGFACE_HUB_TOKEN")
@@ -24,8 +45,12 @@ print(f"Transcribed {len(segments_list)} segments\n")
 print("Running speaker diarization...")
 # 2. Diarization with pyannote
 if not hf_token:
-    print("\nWARNING: HUGGINGFACE_HUB_TOKEN not found in environment variables!")
-    print("Please set it in the .env file or docker-compose.yml")
+    print("\n⚠️  WARNING: HUGGINGFACE_HUB_TOKEN not found in environment variables!")
+    print("Please follow these steps:")
+    print("1. Visit https://huggingface.co/settings/tokens")
+    print("2. Create a token (read access is sufficient)")
+    print("3. Accept the terms at https://huggingface.co/pyannote/speaker-diarization-3.1")
+    print("4. Set the token: export HUGGINGFACE_HUB_TOKEN='your_token_here'")
     print("\nAttempting to continue without token...\n")
 
 try:
@@ -35,6 +60,7 @@ try:
             use_auth_token=hf_token
         )
     else:
+        # Try without token (will fail for gated models)
         pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
 except Exception as e:
     print(f"Error loading pipeline: {e}")
@@ -96,8 +122,8 @@ for result in merged_results:
 
 print("\n" + "=" * 80)
 
-# Save to output directory
-output_file = os.path.join(output_dir, "diarized_transcript.txt")
+# Optional: Save to file
+output_file = os.environ.get("OUTPUT_FILE", "diarized_transcript.txt")
 with open(output_file, "w", encoding="utf-8") as f:
     for result in merged_results:
         f.write(f"[{result['start']:.2f}s - {result['end']:.2f}s] {result['speaker']}\n")
