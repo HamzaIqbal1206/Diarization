@@ -24,13 +24,25 @@ def resolve_audio_file() -> str:
 
     return configured
 
+
+def build_output_file(audio_path: str) -> str:
+    audio_name = os.path.basename(audio_path)
+    base_name, _ = os.path.splitext(audio_name)
+    if not base_name:
+        base_name = "transcript"
+    return f"/app/output/{base_name}_fasterwhisper.txt"
+
 # Configuration
 audio_file = resolve_audio_file()
-model_size = "base"  # Options: tiny, base, small, medium, large-v2, large-v3
-language = "ur"  # Set to None for auto-detection
+model_size = "medium"  # Options: tiny, base, small, medium, large-v1, large-v2, large-v3
+language = "en"  # Set to None for auto-detection
 
 # Get Hugging Face token from environment
 hf_token = os.environ.get("HUGGINGFACE_HUB_TOKEN")
+
+# Speaker count hints for diarization (set via env vars)
+min_speakers = int(os.environ.get("MIN_SPEAKERS", 2))
+max_speakers = int(os.environ.get("MAX_SPEAKERS", 2))
 
 print("Starting transcription with faster-whisper...")
 # 1. Transcription with faster-whisper
@@ -68,7 +80,8 @@ except Exception as e:
     pipeline = None
 
 if pipeline:
-    diarization = pipeline(audio_file)
+    print(f"Diarization with min_speakers={min_speakers}, max_speakers={max_speakers}")
+    diarization = pipeline(audio_file, min_speakers=min_speakers, max_speakers=max_speakers)
     print("Diarization complete!\n")
 else:
     diarization = None
@@ -122,8 +135,9 @@ for result in merged_results:
 
 print("\n" + "=" * 80)
 
-# Optional: Save to file
-output_file = os.environ.get("OUTPUT_FILE", "diarized_transcript.txt")
+# Save to file
+output_file = build_output_file(audio_file)
+os.makedirs(os.path.dirname(output_file), exist_ok=True)
 with open(output_file, "w", encoding="utf-8") as f:
     for result in merged_results:
         f.write(f"[{result['start']:.2f}s - {result['end']:.2f}s] {result['speaker']}\n")

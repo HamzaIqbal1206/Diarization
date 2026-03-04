@@ -6,7 +6,7 @@ Docker-based speaker diarization using Faster-Whisper + pyannote.
 
 - Transcription with `faster-whisper`
 - Speaker diarization with `pyannote/speaker-diarization-3.1`
-- Output writer to `output/diarized_transcript.txt`
+- Output writer to `output/<audio-name>_fasterwhisper.txt`
 
 Main script:
 - `run_diarization.py`
@@ -27,19 +27,21 @@ HUGGINGFACE_HUB_TOKEN=hf_your_token_here docker compose up --build
 ```
 
 Output:
-- `output/diarized_transcript.txt`
+- `output/<audio-name>_fasterwhisper.txt`
 
 ## Configuration
 
 Edit `docker-compose.yml`:
 
-- `AUDIO_FILE=/app/audio/sample2.mp3`
-- `OUTPUT_FILE=/app/output/diarized_transcript.txt`
+- `AUDIO_FILE=/app/audio/sample3.mp3`
 
 To process another file:
-1. Put audio in this folder.
+1. Put audio in `../../data/audio/`.
 2. Update `AUDIO_FILE`.
 3. Run compose again.
+
+Output naming is automatic from input audio name:
+- `hamza.mp3` → `output/hamza_fasterwhisper.txt`
 
 ## Common Commands
 

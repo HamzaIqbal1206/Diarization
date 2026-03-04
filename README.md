@@ -1,33 +1,33 @@
 # Diarization Workspace
 
-This repository contains two separate, Docker-based diarization pipelines:
+This repository contains two Docker-based diarization pipelines:
 
-- `fasterwhisper/` — Faster-Whisper + pyannote diarization
-- `whisperX/` — WhisperX + pyannote diarization
+- `pipelines/fasterwhisper/` — Faster-Whisper + pyannote
+- `pipelines/whisperx/` — WhisperX + pyannote
 
-Both pipelines:
-- run from CPU by default,
-- require a Hugging Face token for diarization,
-- write transcripts to their local `output/` folder.
+Both pipelines run on CPU by default, require a Hugging Face token for diarization, and write transcripts to their own local `output/` folders.
 
 ## Project Structure
 
 ```text
 .
-├── fasterwhisper/
-│   ├── run_diarization.py
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   ├── requirements.txt
-│   ├── sample2.mp3
-│   └── output/
-└── whisperX/
-		├── run_diarization.py
-		├── Dockerfile
-		├── docker-compose.yml
-		├── requirements.txt
-		├── sample2.mp3
-		└── output/
+├── data/
+│   └── audio/                   # shared input audio files
+└── pipelines/
+		├── fasterwhisper/
+		│   ├── run_diarization.py
+		│   ├── Dockerfile
+		│   ├── docker-compose.yml
+		│   ├── requirements.txt
+		│   ├── output/
+		│   └── README.md
+		└── whisperx/
+				├── run_diarization.py
+				├── Dockerfile
+				├── docker-compose.yml
+				├── requirements.txt
+				├── output/
+				└── README.md
 ```
 
 ## Prerequisites
@@ -39,57 +39,45 @@ Both pipelines:
 
 ## Quick Start
 
-### 1) Run Faster-Whisper Pipeline
+1) Put your audio file in `data/audio/`.
+
+2) Run Faster-Whisper pipeline:
 
 ```bash
-cd fasterwhisper
+cd pipelines/fasterwhisper
 HUGGINGFACE_HUB_TOKEN=hf_your_token_here docker compose up --build
 ```
 
-Output:
-- `fasterwhisper/output/diarized_transcript.txt`
+Output: `pipelines/fasterwhisper/output/<audio-name>_fasterwhisper.txt`
 
-### 2) Run WhisperX Pipeline
+3) Run WhisperX pipeline:
 
 ```bash
-cd whisperX
+cd pipelines/whisperx
 HUGGINGFACE_HUB_TOKEN=hf_your_token_here docker compose up --build
 ```
 
-Output:
-- `whisperX/output/diarized_transcript_whisperx.txt`
+Output: `pipelines/whisperx/output/<audio-name>_whisperx.txt`
 
 ## Changing Input Audio
 
-In each folder, edit `docker-compose.yml`:
+In each pipeline `docker-compose.yml`, set:
 
 - `AUDIO_FILE=/app/audio/<your-audio-file>`
 
-Then place that file in the same folder as the compose file.
+Then place that file in `data/audio/`.
 
 ## Useful Commands
 
-From inside either `fasterwhisper/` or `whisperX/`:
+From inside either pipeline folder:
 
 ```bash
-# stop and remove containers
 docker compose down
-
-# run in background
 docker compose up --build -d
-
-# follow logs
 docker compose logs -f
 ```
-
-## Troubleshooting
-
-- **Diarization not running**: token missing/invalid, or pyannote terms not accepted.
-- **Container name conflict**: remove old container with
-	`docker rm -f whisper-diarization` or `docker rm -f whisperx-diarization`.
-- **Slow run on CPU**: expected for larger models; first run also downloads models.
 
 ## Security
 
 - Never commit real tokens.
-- Prefer environment variables (`HUGGINGFACE_HUB_TOKEN=...`) when running commands.
+- Prefer runtime environment variables (`HUGGINGFACE_HUB_TOKEN=...`).

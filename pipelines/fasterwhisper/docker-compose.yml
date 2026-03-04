@@ -5,11 +5,12 @@ services:
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - AUDIO_FILE=/app/audio/sample3.mp3
-      - OUTPUT_FILE=/app/output/diarized_transcript.txt
+      - MIN_SPEAKERS=2
+      - MAX_SPEAKERS=2
     volumes:
-      # Mount current directory for audio files
-      - ./:/app/audio:ro
-      # Mount output directory
+      # Shared input audio directory
+      - ../../data/audio:/app/audio:ro
+      # Output directory local to this pipeline
       - ./output:/app/output
     working_dir: /app
     command: python run_diarization.py

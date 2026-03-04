@@ -39,7 +39,7 @@ wheels/
 .sublime-workspace
 
 # Output & Temporary
-output/
+pipelines/*/output/*.txt
 transcript_output/
 *.txt.save
 *.txt~

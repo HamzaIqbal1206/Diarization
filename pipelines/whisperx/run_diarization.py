@@ -26,10 +26,18 @@ def resolve_audio_file() -> str:
     return configured
 
 
+def build_output_file(audio_path: str) -> str:
+    audio_name = os.path.basename(audio_path)
+    base_name, _ = os.path.splitext(audio_name)
+    if not base_name:
+        base_name = "transcript"
+    return f"/app/output/{base_name}_whisperx.txt"
+
+
 def main() -> None:
     audio_file = resolve_audio_file()
     model_name = os.environ.get("WHISPERX_MODEL", "small")
-    output_file = os.environ.get("OUTPUT_FILE", "/app/output/diarized_transcript_whisperx.txt")
+    output_file = build_output_file(audio_file)
     language = os.environ.get("LANGUAGE", "en")
     hf_token = os.environ.get("HUGGINGFACE_HUB_TOKEN")
 
@@ -52,10 +60,13 @@ def main() -> None:
     except Exception as error:
         print(f"Alignment failed, continuing without alignment: {error}")
 
+    min_speakers = int(os.environ.get("MIN_SPEAKERS", 2))
+    max_speakers = int(os.environ.get("MAX_SPEAKERS", 2))
+
     if hf_token:
-        print("Running whisperX diarization...")
+        print(f"Running whisperX diarization (min_speakers={min_speakers}, max_speakers={max_speakers})...")
         diarize_model = whisperx.DiarizationPipeline(use_auth_token=hf_token, device=device)
-        diarize_segments = diarize_model(audio_file)
+        diarize_segments = diarize_model(audio_file, min_speakers=min_speakers, max_speakers=max_speakers)
         result = whisperx.assign_word_speakers(diarize_segments, result)
     else:
         print("HUGGINGFACE_HUB_TOKEN missing; continuing without speaker diarization.")
