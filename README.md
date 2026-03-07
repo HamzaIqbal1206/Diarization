@@ -3,8 +3,12 @@
 ## Author
 
 Mohammad Hamza Iqbal
-Under the supervision of Marko Milokovic
 
+## Supervisor
+
+Marko Milokovic
+
+## Overview
 End-to-end speaker diarization app with:
 - `backend/` FastAPI API
 - `frontend/` Angular UI
