@@ -39,6 +39,13 @@ Both pipelines run on CPU by default, require a Hugging Face token for diarizati
 
 ## Quick Start
 
+**Important:** Before running a new diarization job, delete old transcript files from `pipelines/fasterwhisper/output` and `pipelines/whisperx/output` to avoid stale results. You can use:
+
+```bash
+rm pipelines/fasterwhisper/output/*.txt pipelines/whisperx/output/*.txt
+```
+
+This ensures the backend creates fresh outputs and updates job status correctly.
 1) Put your audio file in `data/audio/`.
 
 2) Run Faster-Whisper pipeline:
