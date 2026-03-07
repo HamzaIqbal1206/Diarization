@@ -74,3 +74,8 @@ Thumbs.db
 # Test outputs
 test_transcribe.py.save
 test_*.txt
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/

@@ -1,0 +1,27 @@
+<div class="transcript-panel">
+  @if (status === 'running') {
+    <div class="status-msg">
+      <div class="spinner"></div>
+      <p>Running diarization pipeline... This may take a few minutes.</p>
+    </div>
+  } @else if (segments.length === 0) {
+    <div class="empty-state">
+      <p>Select an audio file and run a pipeline to see the diarized transcript here.</p>
+    </div>
+  } @else {
+    <h2>Transcript</h2>
+    <div class="segments">
+      @for (seg of segments; track seg.start) {
+        <div class="segment">
+          <div class="segment-meta">
+            <span class="speaker" [style.background]="getSpeakerColor(seg.speaker)">
+              {{ seg.speaker }}
+            </span>
+            <span class="time">{{ formatTime(seg.start) }} - {{ formatTime(seg.end) }}</span>
+          </div>
+          <p class="segment-text">{{ seg.text }}</p>
+        </div>
+      }
+    </div>
+  }
+</div>
