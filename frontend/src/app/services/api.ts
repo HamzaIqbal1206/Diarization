@@ -20,9 +20,17 @@ export interface JobStatus {
   status: 'running' | 'completed' | 'failed';
   pipeline: string;
   audioFile: string;
-  transcript?: string;
-  segments?: Segment[];
+  progress?: {
+    stage: string;
+    percent: number;
+    message: string;
+    elapsed_seconds?: number;
+    remaining_seconds?: number;
+  };
   error?: string;
+  segments?: Segment[];
+  transcript?: string;
+  outputFilename?: string;
 }
 
 @Injectable({
@@ -46,9 +54,9 @@ export class ApiService {
   runPipeline(config: {
     pipeline: string;
     audioFile: string;
-    minSpeakers: number;
-    maxSpeakers: number;
-    hfToken: string;
+    language: string | null;
+    minSpeakers: number | null;
+    maxSpeakers: number | null;
   }): Observable<{ jobId: string; status: string }> {
     return this.http.post<{ jobId: string; status: string }>(`${this.baseUrl}/run`, config);
   }

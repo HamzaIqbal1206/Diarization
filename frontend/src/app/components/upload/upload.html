@@ -1,3 +1,10 @@
+<input
+  #fileInput
+  type="file"
+  accept=".mp3,.wav,.m4a,.flac,.ogg,.aac,.aiff"
+  hidden
+  (change)="onFileSelected($event)"
+/>
 <div
   class="drop-zone"
   [class.drag-over]="dragOver"
@@ -12,11 +19,4 @@
     <p>Drop audio file here or <strong>click to browse</strong></p>
     <span class="formats">mp3, wav, m4a, flac, ogg, aac, aiff</span>
   }
-  <input
-    #fileInput
-    type="file"
-    accept=".mp3,.wav,.m4a,.flac,.ogg,.aac,.aiff"
-    hidden
-    (change)="onFileSelected($event)"
-  />
 </div>

@@ -4,13 +4,15 @@ services:
     container_name: whisperx-diarization
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
-      - AUDIO_FILE=/app/audio/sample3.mp3
-      - WHISPERX_MODEL=small
-      - LANGUAGE=en
-      - MIN_SPEAKERS=2
-      - MAX_SPEAKERS=2
+      - AUDIO_FILE=${AUDIO_FILE:-/app/audio/sample3.mp3}
+      - WHISPERX_MODEL=${WHISPERX_MODEL:-small}
+      - LANGUAGE=${LANGUAGE:-en}
+      - MIN_SPEAKERS=${MIN_SPEAKERS:-2}
+      - MAX_SPEAKERS=${MAX_SPEAKERS:-2}
+      - TZ=Asia/Karachi
     volumes:
-      - ../../data/audio:/app/audio:ro
-      - ./output:/app/output
+      # Use absolute paths for Docker Desktop compatibility
+      - /Users/mohammadhamzaiqbal/Documents/Diarization/data/audio:/app/audio:ro
+      - /Users/mohammadhamzaiqbal/Documents/Diarization/pipelines/whisperx/output:/app/output
     working_dir: /app
     command: python run_diarization.py

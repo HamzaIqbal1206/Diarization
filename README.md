@@ -1,104 +1,103 @@
-# Diarization Workspace
+# Diarization
 
-## Author
+A web-based speaker diarization application that transcribes audio files and identifies speakers using state-of-the-art AI models.
 
-Mohammad Hamza Iqbal
+**Author**: Mohammad Hamza Iqbal
+**Supervisor**: Marko Milokovic
 
-## Supervisor
+## Features
 
-Marko Milokovic
+- **Two pipeline options**: Faster-Whisper + pyannote or WhisperX + pyannote
+- **Web UI**: Upload audio, configure settings, and view transcripts
+- **Speaker detection**: Automatically identify and label different speakers
+- **Configurable speaker range**: Set min/max speakers for better accuracy
+- **Real-time progress**: Progress bar with time estimation during processing
+- **Download transcripts**: Save results as .txt files
 
 ## Overview
+
 End-to-end speaker diarization app with:
 - `backend/` FastAPI API
 - `frontend/` Angular UI
 - `pipelines/fasterwhisper/` Faster-Whisper + pyannote
 - `pipelines/whisperx/` WhisperX + pyannote
 
-## Services
+## Tech Stack
 
-- Frontend: `http://localhost:4200`
-- Backend: `http://localhost:8000`
+| Component | Technology |
+|-----------|------------|
+| Backend | FastAPI (Python 3.10+) |
+| Frontend | Angular |
+| Transcription | Faster-Whisper / WhisperX |
+| Diarization | pyannote.audio |
 
 ## Prerequisites
 
-- Python `3.10+`
-- Node.js + npm (for local frontend run)
-- Docker Desktop (for Compose run)
+- Python 3.10+
+- Node.js + npm
+- Docker Desktop
 - Hugging Face token with access to:
-1. `pyannote/speaker-diarization-3.1`
-2. `pyannote/segmentation-3.0`
+  - `pyannote/speaker-diarization-3.1`
+  - `pyannote/segmentation-3.0`
 
-## Environment Setup
+## Setup
 
-Create `.env` in project root:
+1. Create `.env` file in project root:
 
 ```bash
 HUGGINGFACE_HUB_TOKEN=hf_your_token_here
 ```
 
-`.env` is ignored by git.
+2. Accept model terms on Hugging Face:
+   - https://huggingface.co/pyannote/speaker-diarization-3.1
+   - https://huggingface.co/pyannote/segmentation-3.0
 
-## Run with Docker Compose (Recommended)
-
-From repo root:
+## Run with Docker (Recommended)
 
 ```bash
 docker compose up --build
 ```
 
-Behavior:
-- Backend runs in container on `8000`
-- Frontend runs Angular dev server in container on `4200`
-- Changes in `frontend/src/` hot reload automatically
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:4200 |
+| Backend API | http://localhost:8000 |
 
-Stop:
+To stop:
 
 ```bash
 docker compose down
 ```
 
-## Run Without Docker
+## Usage
 
-Backend:
+1. **Upload audio** - Drag & drop or click to browse (mp3, wav, m4a, flac, ogg, aac, aiff)
+2. **Select pipeline** - Choose Faster-Whisper or WhisperX
+3. **Set speaker range** - Configure min/max expected speakers
+4. **Run diarization** - Click the button and wait for processing
+5. **View results** - Transcript with speaker labels appears in the right panel
+6. **Download** - Click the download button to save the transcript
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
+## Output Files
+
+Transcripts are saved with timestamps to preserve history:
+
+```
+pipelines/fasterwhisper/output/audiofile_fasterwhisper_26032026_143045.txt
+pipelines/whisperx/output/audiofile_whisperx_26032026_143045.txt
 ```
 
-Frontend:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-## How It Works
-
-1. Upload/select audio in UI.
-2. Choose pipeline (`fasterwhisper` or `whisperx`) and speaker range.
-3. Run diarization.
-4. View generated transcript + segments in the right panel.
-
-Outputs are written to:
-- `pipelines/fasterwhisper/output/`
-- `pipelines/whisperx/output/`
+Format: `filename_pipeline_DDMYYYY_HHMMSS.txt`
 
 ## Troubleshooting
 
-- If frontend changes do not appear on `4200`, make sure Angular dev server is running (not static Nginx build) and restart:
-
-```bash
-docker compose down
-docker compose up --build
-```
-
-- If diarization fails quickly, verify `HUGGINGFACE_HUB_TOKEN` is set in `.env`.
+| Issue | Solution |
+|-------|----------|
+| Frontend changes not showing | Restart: `docker compose down && docker compose up --build` |
+| Diarization fails immediately | Verify `HUGGINGFACE_HUB_TOKEN` is set correctly in `.env` |
+| Model access denied | Accept terms for pyannote models on Hugging Face |
 
 ## Security
 
-- Never commit real tokens.
-- Keep secrets in `.env` or runtime environment variables.
+- Never commit your `.env` file or tokens
+- `.env` is already in `.gitignore`

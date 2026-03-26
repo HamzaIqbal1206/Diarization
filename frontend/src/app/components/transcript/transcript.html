@@ -1,15 +1,31 @@
 <div class="transcript-panel">
   @if (status === 'running') {
     <div class="status-msg">
-      <div class="spinner"></div>
-      <p>Running diarization pipeline... This may take a few minutes.</p>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progress?.percent ?? 0"></div>
+        </div>
+        <p class="progress-percent">{{ progress?.percent ?? 0 }}%</p>
+        <p class="progress-stage">{{ (progress?.stage ?? 'initializing') | titlecase }}</p>
+        <p class="progress-message">{{ progress?.message ?? 'Starting pipeline...' }}</p>
+        @if (progress?.remaining_seconds; as remaining) {
+          @if (remaining > 0) {
+            <p class="progress-time">~{{ formatTimeRemaining(remaining) }} remaining</p>
+          }
+        }
+      </div>
     </div>
   } @else if (segments.length === 0) {
     <div class="empty-state">
       <p>Select an audio file and run a pipeline to see the diarized transcript here.</p>
     </div>
   } @else {
-    <h2>Transcript</h2>
+    <div class="transcript-header">
+      <h2>{{ filename || 'Transcript' }}</h2>
+      @if (rawTranscript) {
+        <button class="btn-download" (click)="downloadTranscript()">Download</button>
+      }
+    </div>
     <div class="segments">
       @for (seg of segments; track seg.start) {
         <div class="segment">

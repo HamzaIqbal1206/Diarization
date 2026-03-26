@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Upload } from '../upload/upload';
 import { Transcript } from '../transcript/transcript';
-import { ApiService, Segment } from '../../services/api';
+import { ApiService, Segment, JobStatus } from '../../services/api';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,19 +15,22 @@ export class Dashboard implements OnInit {
   audioFiles: string[] = [];
   selectedFile = '';
   pipeline = 'fasterwhisper';
-  minSpeakers = 2;
-  maxSpeakers = 2;
-  hfToken = '';
+  language: string | null = null;
+  minSpeakers: number | null = null;
+  maxSpeakers: number | null = null;
 
   jobId = '';
   jobStatus = '';
   jobError = '';
   segments: Segment[] = [];
+  jobProgress: JobStatus['progress'] | null = null;
+  transcriptFilename = '';
+  rawTranscript = '';
 
   existingTranscripts: { pipeline: string; filename: string }[] = [];
   pollInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.loadAudioFiles();
@@ -38,9 +41,6 @@ export class Dashboard implements OnInit {
     this.api.getAudioFiles().subscribe({
       next: (res) => {
         this.audioFiles = res.files;
-        if (res.files.length && !this.selectedFile) {
-          this.selectedFile = res.files[0];
-        }
       },
     });
   }
@@ -61,15 +61,18 @@ export class Dashboard implements OnInit {
 
     this.jobStatus = 'running';
     this.jobError = '';
+    this.jobProgress = null;
     this.segments = [];
+    this.transcriptFilename = '';
+    this.rawTranscript = '';
 
     this.api
       .runPipeline({
         pipeline: this.pipeline,
         audioFile: this.selectedFile,
+        language: this.language,
         minSpeakers: this.minSpeakers,
         maxSpeakers: this.maxSpeakers,
-        hfToken: this.hfToken,
       })
       .subscribe({
         next: (res) => {
@@ -88,17 +91,25 @@ export class Dashboard implements OnInit {
       this.api.getJobStatus(this.jobId).subscribe({
         next: (job) => {
           this.jobStatus = job.status;
+          this.jobProgress = job.progress || null;
+
           if (job.status === 'completed') {
             this.segments = job.segments || [];
+            this.transcriptFilename = job.outputFilename || this.selectedFile;
+            this.rawTranscript = job.transcript || '';
+            this.jobProgress = null;
             this.stopPolling();
             this.loadTranscripts();
           } else if (job.status === 'failed') {
             this.jobError = job.error || 'Pipeline failed';
+            this.jobProgress = null;
             this.stopPolling();
           }
+
+          this.cdr.detectChanges();
         },
       });
-    }, 3000);
+    }, 2000);
   }
 
   stopPolling() {
@@ -112,7 +123,11 @@ export class Dashboard implements OnInit {
     this.api.getTranscript(pipeline, filename).subscribe({
       next: (res) => {
         this.segments = res.segments;
+        this.transcriptFilename = filename;
+        this.rawTranscript = res.transcript || '';
         this.jobStatus = 'completed';
+        this.jobProgress = null;
+        this.jobError = '';
       },
     });
   }

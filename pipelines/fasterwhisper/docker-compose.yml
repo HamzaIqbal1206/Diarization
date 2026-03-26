@@ -4,17 +4,14 @@ services:
     container_name: whisper-diarization
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
-      - AUDIO_FILE=/app/audio/sample3.mp3
-      - MIN_SPEAKERS=2
-      - MAX_SPEAKERS=2
+      - AUDIO_FILE=${AUDIO_FILE:-/app/audio/sample3.mp3}
+      - LANGUAGE=${LANGUAGE:-}
+      - MIN_SPEAKERS=${MIN_SPEAKERS:-2}
+      - MAX_SPEAKERS=${MAX_SPEAKERS:-2}
+      - TZ=Asia/Karachi
     volumes:
-      # Shared input audio directory
-      - ../../data/audio:/app/audio:ro
-      # Output directory local to this pipeline
-      - ./output:/app/output
+      # Use absolute paths for Docker Desktop compatibility
+      - /Users/mohammadhamzaiqbal/Documents/Diarization/data/audio:/app/audio:ro
+      - /Users/mohammadhamzaiqbal/Documents/Diarization/pipelines/fasterwhisper/output:/app/output
     working_dir: /app
     command: python run_diarization.py
-    # For GPU support (uncomment if you have NVIDIA GPU)
-    # runtime: nvidia
-    # environment:
-    #   - NVIDIA_VISIBLE_DEVICES=all
