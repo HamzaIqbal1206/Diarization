@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-upload',
@@ -9,9 +10,11 @@ import { ApiService } from '../../services/api';
   styleUrl: './upload.scss',
 })
 export class Upload {
-  @Output() fileUploaded = new EventEmitter<string>();
+  @Output() filesUploaded = new EventEmitter<string[]>();
 
   uploading = false;
+  uploadProgress = 0;
+  totalFiles = 0;
   dragOver = false;
 
   constructor(private api: ApiService) {}
@@ -28,27 +31,44 @@ export class Upload {
   onDrop(event: DragEvent) {
     event.preventDefault();
     this.dragOver = false;
-    const file = event.dataTransfer?.files[0];
-    if (file) this.uploadFile(file);
+    const files = Array.from(event.dataTransfer?.files || []);
+    if (files.length > 0) this.uploadFiles(files);
   }
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) this.uploadFile(file);
+    const files = Array.from(input.files || []);
+    if (files.length > 0) this.uploadFiles(files);
     input.value = '';
   }
 
-  private uploadFile(file: File) {
+  private uploadFiles(files: File[]) {
     this.uploading = true;
-    this.api.uploadAudio(file).subscribe({
-      next: (res) => {
+    this.totalFiles = files.length;
+    this.uploadProgress = 0;
+
+    const uploads = files.map((file) => this.api.uploadAudio(file));
+
+    forkJoin(uploads).subscribe({
+      next: (results) => {
         this.uploading = false;
-        this.fileUploaded.emit(res.filename);
+        const filenames = results.map((r) => r.filename);
+        this.filesUploaded.emit(filenames);
       },
       error: () => {
         this.uploading = false;
       },
+    });
+
+    // Track progress manually since forkJoin doesn't give per-file progress
+    let completed = 0;
+    files.forEach((file) => {
+      this.api.uploadAudio(file).subscribe({
+        next: () => {
+          completed++;
+          this.uploadProgress = completed;
+        },
+      });
     });
   }
 }

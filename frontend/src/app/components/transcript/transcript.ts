@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Segment } from '../../services/api';
 
 @Component({
   selector: 'app-transcript',
-  imports: [CommonModule, TitleCasePipe],
+  imports: [CommonModule],
   templateUrl: './transcript.html',
   styleUrl: './transcript.scss',
 })

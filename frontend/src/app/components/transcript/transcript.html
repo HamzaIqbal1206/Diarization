@@ -1,23 +1,7 @@
 <div class="transcript-panel">
-  @if (status === 'running') {
-    <div class="status-msg">
-      <div class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" [style.width.%]="progress?.percent ?? 0"></div>
-        </div>
-        <p class="progress-percent">{{ progress?.percent ?? 0 }}%</p>
-        <p class="progress-stage">{{ (progress?.stage ?? 'initializing') | titlecase }}</p>
-        <p class="progress-message">{{ progress?.message ?? 'Starting pipeline...' }}</p>
-        @if (progress?.remaining_seconds; as remaining) {
-          @if (remaining > 0) {
-            <p class="progress-time">~{{ formatTimeRemaining(remaining) }} remaining</p>
-          }
-        }
-      </div>
-    </div>
-  } @else if (segments.length === 0) {
+  @if (segments.length === 0) {
     <div class="empty-state">
-      <p>Select an audio file and run a pipeline to see the diarized transcript here.</p>
+      <p>Click on a completed job or previous transcript to view results.</p>
     </div>
   } @else {
     <div class="transcript-header">

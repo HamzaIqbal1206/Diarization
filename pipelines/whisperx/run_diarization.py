@@ -7,8 +7,16 @@ import torch
 import whisperx
 
 
-PROGRESS_FILE = "/app/output/progress.json"
+PROGRESS_FILE_BASE = "/app/output/progress"
 _start_time = None
+
+
+def get_progress_file() -> str:
+    """Get progress file path based on JOB_ID env var."""
+    job_id = os.environ.get("JOB_ID")
+    if job_id:
+        return f"{PROGRESS_FILE_BASE}_{job_id}.json"
+    return f"{PROGRESS_FILE_BASE}.json"
 
 
 def update_progress(stage: str, percent: int, message: str):
@@ -25,8 +33,9 @@ def update_progress(stage: str, percent: int, message: str):
     else:
         remaining = 0
 
-    os.makedirs(os.path.dirname(PROGRESS_FILE), exist_ok=True)
-    with open(PROGRESS_FILE, "w") as f:
+    progress_file = get_progress_file()
+    os.makedirs(os.path.dirname(progress_file), exist_ok=True)
+    with open(progress_file, "w") as f:
         json.dump({
             "stage": stage,
             "percent": percent,

@@ -1,7 +1,6 @@
 services:
   whisperx-diarization:
     build: .
-    container_name: whisperx-diarization
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - AUDIO_FILE=${AUDIO_FILE:-/app/audio/sample3.mp3}

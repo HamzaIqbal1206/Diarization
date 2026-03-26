@@ -10,7 +10,15 @@ from glob import glob
 import functools
 print = functools.partial(print, flush=True)
 
-PROGRESS_FILE = "/app/output/progress.json"
+PROGRESS_FILE_BASE = "/app/output/progress"
+
+
+def get_progress_file() -> str:
+    """Get progress file path based on JOB_ID env var."""
+    job_id = os.environ.get("JOB_ID")
+    if job_id:
+        return f"{PROGRESS_FILE_BASE}_{job_id}.json"
+    return f"{PROGRESS_FILE_BASE}.json"
 _start_time = None
 
 def log(msg: str):
@@ -33,10 +41,11 @@ def update_progress(stage: str, percent: int, message: str):
     else:
         remaining = 0
 
+    progress_file = get_progress_file()
     log(f"Progress: {stage} ({percent}%) - {message}")
     try:
-        os.makedirs(os.path.dirname(PROGRESS_FILE), exist_ok=True)
-        with open(PROGRESS_FILE, "w") as f:
+        os.makedirs(os.path.dirname(progress_file), exist_ok=True)
+        with open(progress_file, "w") as f:
             json.dump({
                 "stage": stage,
                 "percent": percent,
@@ -44,7 +53,7 @@ def update_progress(stage: str, percent: int, message: str):
                 "elapsed_seconds": round(elapsed),
                 "remaining_seconds": round(remaining)
             }, f)
-        log(f"Progress file written to: {PROGRESS_FILE}")
+        log(f"Progress file written to: {progress_file}")
     except Exception as e:
         log(f"ERROR writing progress file: {e}")
 

@@ -1,0 +1,75 @@
+<div class="job-queue card">
+  <div class="queue-header">
+    <h2>Job Queue</h2>
+    <div class="queue-stats">
+      <span class="stat running" *ngIf="runningJobs.length > 0">{{ runningJobs.length }} running</span>
+      <span class="stat queued" *ngIf="queuedJobs.length > 0">{{ queuedJobs.length }} queued</span>
+      <span class="stat completed">{{ completedJobs.length }} done</span>
+      <span class="stat failed" *ngIf="failedJobs.length > 0">{{ failedJobs.length }} failed</span>
+    </div>
+  </div>
+
+  @if (jobs.length === 0) {
+    <p class="muted">Add files to start processing.</p>
+  }
+
+  <div class="jobs-list">
+    <!-- Running Jobs -->
+    @for (job of runningJobs; track job.jobId) {
+      <div class="job-item running">
+        <div class="job-info">
+          <span class="job-filename">{{ job.audioFile }}</span>
+          <span class="job-status running">{{ getStatusLabel(job.status) }}</span>
+        </div>
+        @if (job.progress) {
+          <div class="job-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="job.progress.percent"></div>
+            </div>
+            <span class="progress-text">
+              {{ job.progress.percent }}% - {{ job.progress.stage }}
+              @if (job.progress.remaining_seconds && job.progress.remaining_seconds > 0) {
+                <span class="time-remaining">(~{{ formatTime(job.progress.remaining_seconds) }} left)</span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Queued Jobs -->
+    @for (job of queuedJobs; track job.jobId) {
+      <div class="job-item queued">
+        <div class="job-info">
+          <span class="job-filename">{{ job.audioFile }}</span>
+          <span class="job-status queued">{{ getStatusLabel(job.status) }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Completed Jobs -->
+    @for (job of completedJobs; track job.jobId) {
+      <div class="job-item completed" (click)="viewJob.emit(job)">
+        <div class="job-info">
+          <span class="job-filename">{{ job.audioFile }}</span>
+          <span class="job-status completed">{{ getStatusLabel(job.status) }}</span>
+        </div>
+        <span class="view-link">View</span>
+      </div>
+    }
+
+    <!-- Failed Jobs -->
+    @for (job of failedJobs; track job.jobId) {
+      <div class="job-item failed">
+        <div class="job-info">
+          <span class="job-filename">{{ job.audioFile }}</span>
+          <span class="job-status failed">{{ getStatusLabel(job.status) }}</span>
+        </div>
+        @if (job.error) {
+          <p class="job-error">{{ job.error }}</p>
+        }
+        <button class="btn-retry" (click)="retryJob.emit(job)">Retry</button>
+      </div>
+    }
+  </div>
+</div>

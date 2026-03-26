@@ -3,21 +3,12 @@
     <!-- Upload Section -->
     <section class="card">
       <h2>Upload Audio</h2>
-      <app-upload (fileUploaded)="onFileUploaded($event)" />
+      <app-upload (filesUploaded)="onFilesUploaded($event)" />
     </section>
 
     <!-- Configuration Section -->
     <section class="card">
-      <h2>Pipeline Configuration</h2>
-
-      <div class="form-group">
-        <label for="audioFile">Audio File</label>
-        <select id="audioFile" [(ngModel)]="selectedFile">
-          @for (file of audioFiles; track file) {
-            <option [value]="file">{{ file }}</option>
-          }
-        </select>
-      </div>
+      <h2>Settings</h2>
 
       <div class="form-group">
         <label for="pipeline">Pipeline</label>
@@ -61,24 +52,56 @@
           <input id="maxSpeakers" type="number" min="1" max="20" [ngModel]="maxSpeakers" (ngModelChange)="maxSpeakers = $event || null" placeholder="Auto" />
         </div>
       </div>
-
-      <button class="btn-primary" (click)="runPipeline()" [disabled]="jobStatus === 'running' || !selectedFile">
-        @if (jobStatus === 'running') {
-          Running...
-        } @else {
-          Run Diarization
-        }
-      </button>
-
-      @if (jobError) {
-        <div class="error-msg">{{ jobError }}</div>
-      }
     </section>
 
+    <!-- Available Files -->
+    <section class="card">
+      <h2>Audio Files</h2>
+      @if (audioFiles.length === 0) {
+        <p class="muted">No audio files uploaded yet.</p>
+      } @else {
+        <div class="file-list">
+          @for (file of audioFiles; track file) {
+            <div class="file-item" [class.processing]="isFileProcessing(file)">
+              <span class="file-name">{{ file }}</span>
+              <button
+                class="btn-add"
+                (click)="addFile(file)"
+                [disabled]="isFileProcessing(file)"
+              >
+                @if (isFileProcessing(file)) {
+                  Processing...
+                } @else {
+                  Add
+                }
+              </button>
+            </div>
+          }
+        </div>
+        @if (audioFiles.length > 1) {
+          <button class="btn-secondary" (click)="addAllFiles()" [disabled]="allFilesProcessing()">
+            Add All Files
+          </button>
+        }
+      }
+    </section>
   </div>
 
   <div class="right-panel">
-    <app-transcript [segments]="segments" [status]="jobStatus" [progress]="jobProgress" [filename]="transcriptFilename" [rawTranscript]="rawTranscript" />
+    <!-- Job Queue -->
+    <app-job-queue
+      [jobs]="jobs"
+      (viewJob)="viewJobResult($event)"
+      (retryJob)="retryJob($event)"
+    />
+
+    <!-- Transcript View -->
+    <app-transcript
+      [segments]="segments"
+      [status]="viewStatus"
+      [filename]="transcriptFilename"
+      [rawTranscript]="rawTranscript"
+    />
 
     <!-- Existing Transcripts -->
     <section class="card">

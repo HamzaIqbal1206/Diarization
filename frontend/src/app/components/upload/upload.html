@@ -3,6 +3,7 @@
   type="file"
   accept=".mp3,.wav,.m4a,.flac,.ogg,.aac,.aiff"
   hidden
+  multiple
   (change)="onFileSelected($event)"
 />
 <div
@@ -14,9 +15,9 @@
   (click)="fileInput.click()"
 >
   @if (uploading) {
-    <p>Uploading...</p>
+    <p>Uploading {{ uploadProgress }}/{{ totalFiles }}...</p>
   } @else {
-    <p>Drop audio file here or <strong>click to browse</strong></p>
-    <span class="formats">mp3, wav, m4a, flac, ogg, aac, aiff</span>
+    <p>Drop audio files here or <strong>click to browse</strong></p>
+    <span class="formats">mp3, wav, m4a, flac, ogg, aac, aiff (multiple allowed)</span>
   }
 </div>

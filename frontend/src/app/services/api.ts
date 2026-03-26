@@ -17,9 +17,10 @@ export interface TranscriptResult {
 }
 
 export interface JobStatus {
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'queued';
   pipeline: string;
   audioFile: string;
+  batchId?: string;
   progress?: {
     stage: string;
     percent: number;
@@ -31,6 +32,16 @@ export interface JobStatus {
   segments?: Segment[];
   transcript?: string;
   outputFilename?: string;
+}
+
+export interface BatchStatus {
+  status: 'running' | 'completed' | 'partial_failure' | 'failed';
+  pipeline: string;
+  total: number;
+  completed: number;
+  failed: number;
+  jobs: Record<string, string>;
+  jobDetails: Record<string, JobStatus>;
 }
 
 @Injectable({
@@ -71,5 +82,23 @@ export class ApiService {
 
   getTranscript(pipeline: string, filename: string): Observable<TranscriptResult> {
     return this.http.get<TranscriptResult>(`${this.baseUrl}/transcripts/${pipeline}/${filename}`);
+  }
+
+  runBatch(config: {
+    pipeline: string;
+    audioFiles: string[];
+    maxConcurrent?: number;
+    language: string | null;
+    minSpeakers: number | null;
+    maxSpeakers: number | null;
+  }): Observable<{ batchId: string; status: string; total: number; jobs: Record<string, string> }> {
+    return this.http.post<{ batchId: string; status: string; total: number; jobs: Record<string, string> }>(
+      `${this.baseUrl}/run-batch`,
+      config
+    );
+  }
+
+  getBatchStatus(batchId: string): Observable<BatchStatus> {
+    return this.http.get<BatchStatus>(`${this.baseUrl}/batch/${batchId}`);
   }
 }
