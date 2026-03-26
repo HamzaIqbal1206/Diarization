@@ -17,7 +17,8 @@ export interface TranscriptResult {
 }
 
 export interface JobStatus {
-  status: 'running' | 'completed' | 'failed' | 'queued';
+  status: 'running' | 'completed' | 'failed' | 'queued' | 'retrying';
+  retryCount?: number;
   pipeline: string;
   audioFile: string;
   batchId?: string;
@@ -54,6 +55,10 @@ export class ApiService {
 
   getAudioFiles(): Observable<{ files: string[] }> {
     return this.http.get<{ files: string[] }>(`${this.baseUrl}/audio-files`);
+  }
+
+  getSystemInfo(): Observable<{ recommendedConcurrent: number; totalMemoryGB: number; cpuCount: number }> {
+    return this.http.get<{ recommendedConcurrent: number; totalMemoryGB: number; cpuCount: number }>(`${this.baseUrl}/system-info`);
   }
 
   uploadAudio(file: File): Observable<{ filename: string }> {
@@ -100,5 +105,17 @@ export class ApiService {
 
   getBatchStatus(batchId: string): Observable<BatchStatus> {
     return this.http.get<BatchStatus>(`${this.baseUrl}/batch/${batchId}`);
+  }
+
+  pauseAllJobs(): Observable<{ status: string; pausedCount: number }> {
+    return this.http.post<{ status: string; pausedCount: number }>(`${this.baseUrl}/pause`, {});
+  }
+
+  resumeAllJobs(): Observable<{ status: string; resumedCount: number }> {
+    return this.http.post<{ status: string; resumedCount: number }>(`${this.baseUrl}/resume`, {});
+  }
+
+  retryFailedJobs(): Observable<{ status: string; retried: number }> {
+    return this.http.post<{ status: string; retried: number }>(`${this.baseUrl}/retry-failed`, {});
   }
 }

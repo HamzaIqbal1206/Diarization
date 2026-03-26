@@ -21,8 +21,11 @@ export interface QueueJob extends JobStatus {
 })
 export class JobQueue {
   @Input() jobs: QueueJob[] = [];
+  @Input() isPaused: boolean = false;
   @Output() viewJob = new EventEmitter<QueueJob>();
   @Output() retryJob = new EventEmitter<QueueJob>();
+  @Output() togglePause = new EventEmitter<void>();
+  @Output() retryAllFailed = new EventEmitter<void>();
 
   get totalJobs(): number {
     return this.jobs.length;
@@ -44,8 +47,12 @@ export class JobQueue {
     return this.jobs.filter(j => j.status === 'failed');
   }
 
+  get retryingJobs(): QueueJob[] {
+    return this.jobs.filter(j => j.status === 'retrying');
+  }
+
   get activeJobs(): number {
-    return this.runningJobs.length + this.queuedJobs.length;
+    return this.runningJobs.length + this.queuedJobs.length + this.retryingJobs.length;
   }
 
   get collectiveProgress(): number {
@@ -66,7 +73,7 @@ export class JobQueue {
       // queued = 0%
     }
 
-    return Math.round(totalPercent / total);
+    return Math.round((totalPercent / total) * 10) / 10; // 1 decimal place
   }
 
   get estimatedTimeRemaining(): number {
@@ -86,12 +93,13 @@ export class JobQueue {
     return this.activeJobs > 0;
   }
 
-  getStatusLabel(status: string): string {
+  getStatusLabel(status: string, retryCount?: number): string {
     switch (status) {
       case 'running': return 'Processing';
       case 'queued': return 'Queued';
       case 'completed': return 'Done';
       case 'failed': return 'Failed';
+      case 'retrying': return `Retry #${retryCount || 1}`;
       default: return status;
     }
   }

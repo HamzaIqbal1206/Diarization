@@ -8,18 +8,37 @@
     <div class="collective-progress">
       <div class="progress-header">
         <span class="progress-title">
-          @if (isProcessing) {
+          @if (isPaused) {
+            Paused - {{ activeJobs }} jobs waiting
+          } @else if (isProcessing) {
             Processing {{ activeJobs }} of {{ totalJobs }} files
           } @else {
             {{ completedJobs.length }} of {{ totalJobs }} completed
           }
         </span>
+        @if (isProcessing || isPaused) {
+          <button class="btn-pause" (click)="togglePause.emit()" [class.paused]="isPaused">
+            @if (isPaused) {
+              Resume
+            } @else {
+              Pause
+            }
+          </button>
+        }
+        @if (failedJobs.length > 0 && !isProcessing) {
+          <button class="btn-retry-all" (click)="retryAllFailed.emit()">
+            Retry All Failed ({{ failedJobs.length }})
+          </button>
+        }
         <span class="progress-stats">
           @if (runningJobs.length > 0) {
             <span class="stat running">{{ runningJobs.length }} running</span>
           }
           @if (queuedJobs.length > 0) {
             <span class="stat queued">{{ queuedJobs.length }} queued</span>
+          }
+          @if (retryingJobs.length > 0) {
+            <span class="stat retrying">{{ retryingJobs.length }} retrying</span>
           }
           @if (failedJobs.length > 0) {
             <span class="stat failed">{{ failedJobs.length }} failed</span>
@@ -32,7 +51,7 @@
       </div>
 
       <div class="progress-footer">
-        <span class="progress-percent">{{ collectiveProgress }}%</span>
+        <span class="progress-percent">{{ collectiveProgress.toFixed(1) }}%</span>
         @if (isProcessing && estimatedTimeRemaining > 0) {
           <span class="progress-time">~{{ formatTime(estimatedTimeRemaining) }} remaining</span>
         }
@@ -42,11 +61,11 @@
     <!-- Jobs List -->
     <div class="jobs-list">
       @for (job of jobs; track job.jobId) {
-        <div class="job-item" [class.running]="job.status === 'running'" [class.completed]="job.status === 'completed'" [class.failed]="job.status === 'failed'" [class.queued]="job.status === 'queued'">
+        <div class="job-item" [class.running]="job.status === 'running'" [class.completed]="job.status === 'completed'" [class.failed]="job.status === 'failed'" [class.queued]="job.status === 'queued'" [class.retrying]="job.status === 'retrying'">
           <div class="job-info">
             <span class="job-filename">{{ job.audioFile }}</span>
-            <span class="job-status" [class.running]="job.status === 'running'" [class.completed]="job.status === 'completed'" [class.failed]="job.status === 'failed'" [class.queued]="job.status === 'queued'">
-              {{ getStatusLabel(job.status) }}
+            <span class="job-status" [class.running]="job.status === 'running'" [class.completed]="job.status === 'completed'" [class.failed]="job.status === 'failed'" [class.queued]="job.status === 'queued'" [class.retrying]="job.status === 'retrying'">
+              {{ getStatusLabel(job.status, job.retryCount) }}
             </span>
           </div>
 
@@ -55,7 +74,7 @@
               <div class="mini-bar">
                 <div class="mini-fill" [style.width.%]="job.progress.percent"></div>
               </div>
-              <span class="mini-percent">{{ job.progress.percent }}%</span>
+              <span class="mini-percent">{{ job.progress.percent.toFixed(1) }}%</span>
               <span class="mini-stage">{{ job.progress.stage }}</span>
             </div>
           }

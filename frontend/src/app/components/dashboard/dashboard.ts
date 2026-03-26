@@ -21,6 +21,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   jobs: QueueJob[] = [];
   jobProgress: Record<string, JobStatus['progress']> = {};
+  isPaused = false;
 
   // Currently viewing result
   segments: Segment[] = [];
@@ -63,7 +64,7 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   isFileProcessing(filename: string): boolean {
-    return this.jobs.some(j => j.audioFile === filename && (j.status === 'running' || j.status === 'queued'));
+    return this.jobs.some(j => j.audioFile === filename && (j.status === 'running' || j.status === 'queued' || j.status === 'retrying'));
   }
 
   allFilesProcessing(): boolean {
@@ -98,6 +99,7 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private processQueue() {
+    // Backend handles concurrency - just start all queued jobs
     const queuedJobs = this.jobs.filter(j => j.status === 'queued');
     queuedJobs.forEach(job => this.startJob(job));
   }
@@ -129,7 +131,7 @@ export class Dashboard implements OnInit, OnDestroy {
     if (this.pollInterval) return; // Already polling
 
     this.pollInterval = setInterval(() => {
-      const runningJobs = this.jobs.filter(j => j.status === 'running');
+      const runningJobs = this.jobs.filter(j => j.status === 'running' || j.status === 'retrying');
       if (runningJobs.length === 0) {
         this.stopPolling();
         return;
@@ -144,6 +146,7 @@ export class Dashboard implements OnInit, OnDestroy {
             job.transcript = status.transcript;
             job.outputFilename = status.outputFilename;
             job.error = status.error;
+            job.retryCount = status.retryCount;
 
             if (status.status === 'completed' || status.status === 'failed') {
               if (status.status === 'completed') {
@@ -187,6 +190,37 @@ export class Dashboard implements OnInit, OnDestroy {
         this.transcriptFilename = filename;
         this.rawTranscript = res.transcript || '';
         this.viewStatus = 'completed';
+      },
+    });
+  }
+
+  togglePause() {
+    if (this.isPaused) {
+      this.api.resumeAllJobs().subscribe({
+        next: () => {
+          this.isPaused = false;
+          this.cdr.detectChanges();
+        },
+      });
+    } else {
+      this.api.pauseAllJobs().subscribe({
+        next: () => {
+          this.isPaused = true;
+          this.cdr.detectChanges();
+        },
+      });
+    }
+  }
+
+  retryAllFailed() {
+    this.api.retryFailedJobs().subscribe({
+      next: (res) => {
+        if (res.retried > 0) {
+          // Remove old failed jobs and start polling
+          this.jobs = this.jobs.filter(j => j.status !== 'failed');
+          this.startPolling();
+        }
+        this.cdr.detectChanges();
       },
     });
   }
