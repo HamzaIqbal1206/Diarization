@@ -7,29 +7,42 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
-  min-height: 200px;
 }
 
-.queue-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 8px;
+.empty-state {
+  text-align: center;
+  padding: 30px;
 
-  h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
+  p {
+    color: var(--text-muted);
+    font-size: 14px;
     margin: 0;
   }
 }
 
-.queue-stats {
+// Collective Progress Section
+.collective-progress {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.progress-stats {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 
   .stat {
     font-size: 11px;
@@ -47,11 +60,6 @@
       color: #856404;
     }
 
-    &.completed {
-      background: rgba(40, 167, 69, 0.15);
-      color: #28a745;
-    }
-
     &.failed {
       background: rgba(220, 53, 69, 0.15);
       color: #dc3545;
@@ -59,26 +67,56 @@
   }
 }
 
-.muted {
-  color: var(--text-muted);
-  font-size: 13px;
-  text-align: center;
-  padding: 20px;
+.main-progress-bar {
+  height: 12px;
+  background: var(--surface-soft);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
+.main-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--palette-500));
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.progress-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-percent {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.progress-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+// Jobs List
 .jobs-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: calc(100vh - 350px);
+  gap: 6px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .job-item {
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 
   &.running {
     border-left: 4px solid #007bff;
@@ -87,7 +125,7 @@
 
   &.queued {
     border-left: 4px solid #ffc107;
-    opacity: 0.8;
+    opacity: 0.7;
   }
 
   &.completed {
@@ -110,6 +148,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .job-filename {
@@ -120,11 +160,12 @@
 }
 
 .job-status {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
+  font-weight: 600;
 
   &.running {
     background: #007bff;
@@ -147,49 +188,56 @@
   }
 }
 
-.job-progress {
-  margin-top: 10px;
+.job-mini-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
 
-  .progress-bar {
+  .mini-bar {
+    flex: 1;
     height: 4px;
     background: var(--border);
     border-radius: 2px;
     overflow: hidden;
-    margin-bottom: 6px;
   }
 
-  .progress-fill {
+  .mini-fill {
     height: 100%;
     background: #007bff;
     transition: width 0.3s ease;
   }
 
-  .progress-text {
+  .mini-percent {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 32px;
+  }
+
+  .mini-stage {
     font-size: 11px;
     color: var(--text-muted);
-  }
-
-  .time-remaining {
-    margin-left: 8px;
-    font-style: italic;
+    text-transform: capitalize;
   }
 }
 
-.view-link {
-  font-size: 12px;
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.job-error {
-  margin: 8px 0 0;
+.btn-view {
+  padding: 4px 12px;
   font-size: 11px;
-  color: #dc3545;
-  word-break: break-word;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
 }
 
 .btn-retry {
-  margin-top: 8px;
   padding: 4px 12px;
   font-size: 11px;
   background: var(--border);
@@ -197,8 +245,17 @@
   border-radius: 4px;
   color: var(--text-primary);
   cursor: pointer;
+  margin-top: 6px;
 
   &:hover {
     background: var(--surface);
   }
+}
+
+.job-error {
+  width: 100%;
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #dc3545;
+  word-break: break-word;
 }

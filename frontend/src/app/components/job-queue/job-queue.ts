@@ -4,6 +4,13 @@ import { JobStatus } from '../../services/api';
 
 export interface QueueJob extends JobStatus {
   jobId: string;
+  progress?: {
+    stage: string;
+    percent: number;
+    message: string;
+    elapsed_seconds?: number;
+    remaining_seconds?: number;
+  };
 }
 
 @Component({
@@ -16,6 +23,10 @@ export class JobQueue {
   @Input() jobs: QueueJob[] = [];
   @Output() viewJob = new EventEmitter<QueueJob>();
   @Output() retryJob = new EventEmitter<QueueJob>();
+
+  get totalJobs(): number {
+    return this.jobs.length;
+  }
 
   get runningJobs(): QueueJob[] {
     return this.jobs.filter(j => j.status === 'running');
@@ -31,6 +42,48 @@ export class JobQueue {
 
   get failedJobs(): QueueJob[] {
     return this.jobs.filter(j => j.status === 'failed');
+  }
+
+  get activeJobs(): number {
+    return this.runningJobs.length + this.queuedJobs.length;
+  }
+
+  get collectiveProgress(): number {
+    const total = this.jobs.length;
+    if (total === 0) return 0;
+
+    // Calculate overall progress: completed = 100%, failed = 100%, running = actual %, queued = 0%
+    let totalPercent = 0;
+
+    for (const job of this.jobs) {
+      if (job.status === 'completed') {
+        totalPercent += 100;
+      } else if (job.status === 'failed') {
+        totalPercent += 100; // Count failed as "done"
+      } else if (job.status === 'running' && job.progress) {
+        totalPercent += job.progress.percent;
+      }
+      // queued = 0%
+    }
+
+    return Math.round(totalPercent / total);
+  }
+
+  get estimatedTimeRemaining(): number {
+    const running = this.runningJobs;
+    if (running.length === 0) return 0;
+
+    // Use the max remaining time from any running job
+    const maxRemaining = running.reduce((max, job) => {
+      const remaining = job.progress?.remaining_seconds || 0;
+      return Math.max(max, remaining);
+    }, 0);
+
+    return maxRemaining;
+  }
+
+  get isProcessing(): boolean {
+    return this.activeJobs > 0;
   }
 
   getStatusLabel(status: string): string {
