@@ -9,9 +9,13 @@ services:
       - MIN_SPEAKERS=${MIN_SPEAKERS:-2}
       - MAX_SPEAKERS=${MAX_SPEAKERS:-2}
       - TZ=Asia/Karachi
+      - HF_HOME=/app/.cache/huggingface
     volumes:
-      # Use absolute paths for Docker Desktop compatibility
-      - /Users/mohammadhamzaiqbal/Documents/Diarization/data/audio:/app/audio:ro
-      - /Users/mohammadhamzaiqbal/Documents/Diarization/pipelines/whisperx/output:/app/output
+      # Relative paths (from pipelines/whisperx/)
+      - ../../data/audio:/app/audio:ro
+      - ./output:/app/output
+      # Model caches
+      - ../../.cache/huggingface:/app/.cache/huggingface
+      - ${HOME}/.cache/torch:/app/.cache/torch
     working_dir: /app
     command: python run_diarization.py
