@@ -18,9 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY run_diarization.py ./
+COPY worker.py ./
 
-# Create output directory
-RUN mkdir -p /app/output
+# Create results directory
+RUN mkdir -p /app/results
 
 # Set environment variable for Hugging Face token
 ENV HUGGINGFACE_HUB_TOKEN=""

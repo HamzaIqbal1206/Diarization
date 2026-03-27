@@ -13,7 +13,7 @@ services:
     volumes:
       # Relative paths (from pipelines/whisperx/)
       - ../../data/audio:/app/audio:ro
-      - ./output:/app/output
+      - ../../results:/app/results
       # Model caches
       - ../../.cache/huggingface:/app/.cache/huggingface
       - ${HOME}/.cache/torch:/app/.cache/torch

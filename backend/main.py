@@ -37,7 +37,7 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent  # Go up from backend/ to project root
 AUDIO_DIR = Path(os.environ.get("AUDIO_DIR", str(BASE_DIR / "data" / "audio")))
 PIPELINES_DIR = Path(os.environ.get("PIPELINES_DIR", str(PROJECT_ROOT / "pipelines")))
-OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", str(PROJECT_ROOT / "pipelines")))
+RESULTS_DIR = Path(os.environ.get("RESULTS_DIR", str(PROJECT_ROOT / "results")))
 
 ALLOWED_EXTENSIONS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".aiff"}
 
@@ -52,11 +52,11 @@ RETRY_BATCH_SIZE = 3
 
 
 def read_progress(pipeline_name: str, job_id: str | None = None) -> dict | None:
-    """Read progress file from the pipeline's output directory."""
+    """Read progress file from the results directory."""
     if job_id:
-        progress_file = PIPELINES_DIR / pipeline_name / "output" / f"progress_{job_id}.json"
+        progress_file = RESULTS_DIR / f"progress_{job_id}.json"
     else:
-        progress_file = PIPELINES_DIR / pipeline_name / "output" / "progress.json"
+        progress_file = RESULTS_DIR / f"progress_{pipeline_name}.json"
     logger.debug(f"Reading progress from: {progress_file}")
     if progress_file.exists():
         try:
@@ -304,12 +304,11 @@ async def _run_docker(
         stdout, stderr = await process.communicate()
 
         if process.returncode == 0:
-            # Find output file
+            # Find output file in results directory
             base_name = Path(audio_file).stem
             suffix = "fasterwhisper" if "fasterwhisper" in str(pipeline_dir) else "whisperx"
-            output_dir = pipeline_dir / "output"
             pattern = f"{base_name}_{suffix}_*.txt"
-            matches = sorted(glob_module.glob(str(output_dir / pattern)), reverse=True)
+            matches = sorted(glob_module.glob(str(RESULTS_DIR / pattern)), reverse=True)
             output_file = Path(matches[0]) if matches else None
 
             transcript = ""
@@ -594,27 +593,27 @@ async def retry_failed_jobs():
 
 @app.get("/api/transcripts")
 def list_transcripts():
-    """List all existing transcript files."""
+    """List all existing transcript files from results directory."""
     results = []
-    for pipeline_name in ("fasterwhisper", "whisperx"):
-        output_dir = PIPELINES_DIR / pipeline_name / "output"
-        if output_dir.exists():
-            for f in sorted(output_dir.iterdir(), key=lambda x: x.name, reverse=True):
-                if f.suffix == ".txt" and f.name != ".gitkeep":
-                    results.append({"pipeline": pipeline_name, "filename": f.name})
+    if RESULTS_DIR.exists():
+        for f in sorted(RESULTS_DIR.iterdir(), key=lambda x: x.name, reverse=True):
+            if f.suffix == ".txt" and f.name != ".gitkeep":
+                # Determine pipeline from filename
+                pipeline = "fasterwhisper" if "fasterwhisper" in f.name else "whisperx"
+                results.append({"pipeline": pipeline, "filename": f.name})
     return {"transcripts": results}
 
 
 @app.get("/api/transcripts/{pipeline}/{filename}")
 def get_transcript(pipeline: str, filename: str):
-    """Read a specific transcript file."""
+    """Read a specific transcript file from results directory."""
     if pipeline not in ("fasterwhisper", "whisperx"):
         raise HTTPException(status_code=400, detail="Invalid pipeline")
 
     if ".." in filename or "/" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    file_path = PIPELINES_DIR / pipeline / "output" / filename
+    file_path = RESULTS_DIR / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Transcript not found")
 

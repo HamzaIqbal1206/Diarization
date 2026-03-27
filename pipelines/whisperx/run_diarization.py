@@ -7,7 +7,7 @@ import torch
 import whisperx
 
 
-PROGRESS_FILE_BASE = "/app/output/progress"
+PROGRESS_FILE_BASE = "/app/results/progress"
 _start_time = None
 
 
@@ -80,7 +80,7 @@ def build_output_file(audio_path: str) -> str:
         timestamp = datetime.now(tz).strftime("%d%m%Y_%H%M%S")
     except Exception:
         timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
-    return f"/app/output/{base_name}_whisperx_{timestamp}.txt"
+    return f"/app/results/{base_name}_whisperx_{timestamp}.txt"
 
 
 def main() -> None:

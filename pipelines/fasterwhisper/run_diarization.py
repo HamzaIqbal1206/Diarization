@@ -10,7 +10,7 @@ from glob import glob
 import functools
 print = functools.partial(print, flush=True)
 
-PROGRESS_FILE_BASE = "/app/output/progress"
+PROGRESS_FILE_BASE = "/app/results/progress"
 
 
 def get_progress_file() -> str:
@@ -102,7 +102,7 @@ def build_output_file(audio_path: str) -> str:
         timestamp = datetime.now(tz).strftime("%d%m%Y_%H%M%S")
     except Exception:
         timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
-    return f"/app/output/{base_name}_fasterwhisper_{timestamp}.txt"
+    return f"/app/results/{base_name}_fasterwhisper_{timestamp}.txt"
 
 # Configuration
 log("=" * 60)
@@ -117,7 +117,7 @@ log(f"  MAX_SPEAKERS: {os.environ.get('MAX_SPEAKERS', 'not set')}")
 log(f"  HUGGINGFACE_HUB_TOKEN: {'set' if os.environ.get('HUGGINGFACE_HUB_TOKEN') else 'not set'}")
 
 audio_file = resolve_audio_file()
-model_size = "medium"  # Options: tiny, base, small, medium, large-v1, large-v2, large-v3
+model_size = "small"  # Options: tiny, base, small, medium, large-v1, large-v2, large-v3
 language = os.environ.get("LANGUAGE") or None  # None for auto-detection
 
 log(f"Resolved audio file: {audio_file}")

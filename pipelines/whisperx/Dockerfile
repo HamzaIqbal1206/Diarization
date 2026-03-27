@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY run_diarization.py ./
-RUN mkdir -p /app/output
+RUN mkdir -p /app/results
 
 ENV HUGGINGFACE_HUB_TOKEN=""
 

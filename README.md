@@ -79,6 +79,7 @@ Diarization/
 │   ├── fasterwhisper/          # Faster-Whisper + pyannote pipeline
 │   └── whisperx/               # WhisperX + pyannote pipeline
 ├── data/audio/                 # Shared audio input directory
+├── results/                    # All transcript outputs
 └── scripts/                    # Utility scripts
 ```
 
@@ -206,11 +207,11 @@ docker compose down
 
 ## Output Files
 
-Transcripts are saved with timestamps:
+All transcripts are saved to the shared `results/` directory:
 
 ```
-pipelines/fasterwhisper/output/audiofile_fasterwhisper_27032026_143045.txt
-pipelines/whisperx/output/audiofile_whisperx_27032026_143045.txt
+results/audiofile_fasterwhisper_27032026_143045.txt
+results/audiofile_whisperx_27032026_143045.txt
 ```
 
 Format: `filename_pipeline_DDMYYYY_HHMMSS.txt`
