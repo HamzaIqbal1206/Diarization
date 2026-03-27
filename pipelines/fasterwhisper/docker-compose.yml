@@ -8,9 +8,14 @@ services:
       - MIN_SPEAKERS=${MIN_SPEAKERS:-2}
       - MAX_SPEAKERS=${MAX_SPEAKERS:-2}
       - TZ=Asia/Karachi
+      - HF_HOME=/app/.cache/huggingface
     volumes:
       # Use absolute paths for Docker Desktop compatibility
       - /Users/mohammadhamzaiqbal/Documents/Diarization/data/audio:/app/audio:ro
       - /Users/mohammadhamzaiqbal/Documents/Diarization/pipelines/fasterwhisper/output:/app/output
+      # Shared model cache using host path - ALL containers share this
+      - /Users/mohammadhamzaiqbal/Documents/Diarization/.cache/huggingface:/app/.cache/huggingface
+      # Pyannote/torch cache for speaker diarization models
+      - /Users/mohammadhamzaiqbal/.cache/torch:/app/.cache/torch
     working_dir: /app
     command: python run_diarization.py
