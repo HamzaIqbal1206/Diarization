@@ -52,6 +52,10 @@ diarized_transcript.txt
 *.flac
 *.ogg
 
+# Allow audio chunks for testing
+!data/audio/audio_chunks/*.mp3
+!data/audio/test*.aiff
+
 # Docker
 .dockerignore
 docker-compose.override.yml
