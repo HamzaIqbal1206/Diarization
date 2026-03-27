@@ -18,7 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY run_diarization.py ./
-COPY worker.py ./
 
 # Create results directory
 RUN mkdir -p /app/results
