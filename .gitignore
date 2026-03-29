@@ -46,9 +46,8 @@ transcript_output/
 *.txt~
 diarized_transcript.txt
 
-# Results (transcribed files)
-results/*.txt
-results/progress*.json
+# Results folder - keep transcribed files (tracked)
+# results/*.txt are now tracked in git
 
 # Audio Files (too large)
 *.mp3
