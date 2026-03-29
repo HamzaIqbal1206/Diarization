@@ -1,184 +1,164 @@
 # Configurations
 
-Both pipelines are configured through **environment variables** set in their respective `docker-compose.yml` files. Below is a breakdown of every tuneable parameter.
+Both pipelines are configured through **environment variables** passed to Docker containers. The backend API also reads configurations when starting jobs.
 
 ---
 
-## Common Configuration (Both Pipelines)
+## Backend API Configuration
 
-These environment variables are shared across the Faster Whisper and WhisperX pipelines.
+Settings are passed per-request from the frontend. No backend config file needed.
 
-### `HUGGINGFACE_HUB_TOKEN`
-- **Where to set:** `docker-compose.yml` or shell environment
-- **Default:** _(empty)_
-- Your Hugging Face access token. **Required** for speaker diarization (pyannote models are gated).
-- Generate one at https://huggingface.co/settings/tokens and accept the model terms at https://huggingface.co/pyannote/speaker-diarization-3.1.
+### Request Parameters
 
-### `AUDIO_FILE`
-- **Where to set:** `docker-compose.yml`
-- **Default:** `sample6.m4a` (Faster Whisper) / `sample2.mp3` (WhisperX)
-- Path to the audio file to process. Can be a filename inside the mounted `/app/audio` directory or an absolute path.
-- Supported formats: `.mp3`, `.wav`, `.m4a`, `.flac`, `.ogg`, `.aac`, `.aiff`
-- If the file is not found, the pipeline auto-discovers the first audio file in `/app/audio`.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `pipeline` | string | `fasterwhisper` | Pipeline to use (`fasterwhisper` or `whisperx`) |
+| `audioFile` | string | required | Audio filename to process |
+| `language` | string | `null` | Language code (null = auto-detect) |
+| `minSpeakers` | number | `null` | Minimum expected speakers |
+| `maxSpeakers` | number | `null` | Maximum expected speakers |
 
-### `MIN_SPEAKERS`
-- **Where to set:** `docker-compose.yml`
-- **Default:** `2`
-- Minimum number of speakers expected in the audio. Helps the diarization model when you know the speaker count in advance.
+### Supported Languages
 
-### `MAX_SPEAKERS`
-- **Where to set:** `docker-compose.yml`
-- **Default:** `2`
-- Maximum number of speakers expected. Set equal to `MIN_SPEAKERS` if you know the exact count; widen the range if unsure.
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `es` | Spanish |
+| `fr` | French |
+| `de` | German |
+| `it` | Italian |
+| `pt` | Portuguese |
+| `nl` | Dutch |
+| `ru` | Russian |
+| `zh` | Chinese |
+| `ja` | Japanese |
+| `ko` | Korean |
+| `ar` | Arabic |
+| `hi` | Hindi |
+| `tr` | Turkish |
+| `pl` | Polish |
+| `uk` | Ukrainian |
+| `vi` | Vietnamese |
+| `null` | Auto-detect |
+
+---
+
+## Docker Pipeline Configuration
+
+Both pipelines read configuration from environment variables in `docker-compose.yml`.
+
+### Common Variables (Both Pipelines)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HUGGINGFACE_HUB_TOKEN` | required | HF token for pyannote models |
+| `AUDIO_FILE` | auto-detect | Audio filename to process |
+| `MIN_SPEAKERS` | `null` | Minimum speakers for diarization |
+| `MAX_SPEAKERS` | `null` | Maximum speakers for diarization |
 
 ---
 
 ## Faster Whisper Pipeline
 
-**File:** `pipelines/fasterwhisper/docker-compose.yml`  
-**Script:** `pipelines/fasterwhisper/run_diarization.py`
+**Location**: `pipelines/fasterwhisper/`
+**Script**: `run_diarization.py`
 
-### Whisper Model Size
-
-Set directly in `run_diarization.py` (line 38):
-
-```python
-model_size = "medium"
-```
-
-Available options:
-
-- **`tiny`** — Fastest / Lowest accuracy / ~1 GB VRAM
-- **`base`** — Very fast / Low accuracy / ~1 GB VRAM
-- **`small`** — Fast / Moderate accuracy / ~2 GB VRAM
-- **`medium`** — Moderate speed / Good accuracy / ~5 GB VRAM
-- **`large-v1`** — Slow / High accuracy / ~10 GB VRAM
-- **`large-v2`** — Slow / Higher accuracy / ~10 GB VRAM
-- **`large-v3`** — Slow / Highest accuracy / ~10 GB VRAM
-
-### Language
-
-Set in `run_diarization.py` (line 39):
-
-```python
-language = "en"
-```
-
-- Set to a language code (`"en"`, `"fr"`, `"de"`, etc.) to force that language.
-- Set to `None` for **auto-detection** (slower, as the model must identify the language first).
-
-### Device & Compute Type
-
-Set in `run_diarization.py` (line 52):
-
-```python
-model = WhisperModel(model_size, device="cpu", compute_type="int8")
-```
-
-- **`device`** — `"cpu"` or `"cuda"`
-  - Use `"cuda"` if you have an NVIDIA GPU and the container has GPU access.
-- **`compute_type`** — `"int8"`, `"float16"`, or `"float32"`
-  - `int8` is best for CPU; `float16` is ideal for GPU; `float32` gives maximum precision at the cost of speed/memory.
-
-To enable GPU inside Docker, uncomment the GPU section in `docker-compose.yml`:
+### Environment Variables (`docker-compose.yml`)
 
 ```yaml
-runtime: nvidia
 environment:
-  - NVIDIA_VISIBLE_DEVICES=all
+  - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+  - AUDIO_FILE=/app/audio/yourfile.mp3
+  - MIN_SPEAKERS=2
+  - MAX_SPEAKERS=4
 ```
 
-### Diarization Model
+### Script Configuration (`run_diarization.py`)
 
-The pyannote diarization model is set in `run_diarization.py` (line 76):
+| Setting | Location | Options |
+|---------|----------|---------|
+| Model size | Line ~38 | `tiny`, `base`, `small`, `medium`, `large-v1`, `large-v2`, `large-v3` |
+| Device | Line ~52 | `cpu`, `cuda` |
+| Compute type | Line ~52 | `int8` (CPU), `float16` (GPU), `float32` |
 
-```python
-pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=hf_token)
+### Model Size Comparison
+
+| Model | Speed | Accuracy | VRAM |
+|-------|-------|----------|------|
+| `tiny` | Fastest | Lowest | ~1 GB |
+| `base` | Very fast | Low | ~1 GB |
+| `small` | Fast | Moderate | ~2 GB |
+| `medium` | Moderate | Good | ~5 GB |
+| `large-v3` | Slow | Best | ~10 GB |
+
+### GPU Support
+
+Uncomment in `docker-compose.yml`:
+
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: 1
+          capabilities: [gpu]
 ```
-
-You can swap this for another pyannote pipeline (e.g., `"pyannote/speaker-diarization"`) if needed.
 
 ---
 
 ## WhisperX Pipeline
 
-**File:** `pipelines/whisperx/docker-compose.yml`  
-**Script:** `pipelines/whisperx/run_diarization.py`
+**Location**: `pipelines/whisperx/`
+**Script**: `run_diarization.py`
 
-### Whisper Model Size
-
-Set via the `WHISPERX_MODEL` environment variable in `docker-compose.yml`:
+### Environment Variables (`docker-compose.yml`)
 
 ```yaml
-- WHISPERX_MODEL=small
+environment:
+  - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+  - AUDIO_FILE=/app/audio/yourfile.mp3
+  - WHISPERX_MODEL=small
+  - LANGUAGE=en
+  - MIN_SPEAKERS=2
+  - MAX_SPEAKERS=4
 ```
 
-Same model options as the Faster Whisper pipeline: `tiny`, `base`, `small`, `medium`, `large-v1`, `large-v2`, `large-v3`.
+### Additional Variables
 
-### Language
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WHISPERX_MODEL` | `small` | Whisper model size |
+| `LANGUAGE` | auto | Language code for transcription |
 
-Set via the `LANGUAGE` environment variable in `docker-compose.yml`:
+### Auto-Detection
 
-```yaml
-- LANGUAGE=en
-```
-
-Use any supported language code. The pipeline will also attempt alignment for the detected language.
-
-### Device & Compute Type
-
-Automatically selected in `run_diarization.py`:
-
-```python
-device = "cuda" if torch.cuda.is_available() else "cpu"
-compute_type = "float16" if device == "cuda" else "int8"
-```
-
-- If a GPU is available in the container, it uses `cuda` + `float16`.
-- Otherwise falls back to `cpu` + `int8`.
-- No manual change needed unless you want to override this logic.
-
-### Batch Size
-
-Set in `run_diarization.py` (line 56):
-
-```python
-result = model.transcribe(audio, batch_size=8)
-```
-
-- Higher values speed up transcription but use more memory.
-- Lower values (e.g., `1` or `4`) are safer on memory-constrained systems.
-
-### Word-level Alignment
-
-WhisperX runs a secondary alignment step after transcription. This is automatic but can fail for unsupported languages. If alignment fails, the pipeline continues with the original segment timestamps.
+WhisperX automatically detects:
+- **Device**: `cuda` if GPU available, else `cpu`
+- **Compute type**: `float16` for GPU, `int8` for CPU
 
 ---
 
-## Quick Reference — Where to Change What
+## Quick Reference
 
-> **Audio file**
-> - Faster Whisper: `docker-compose.yml` → `AUDIO_FILE`
-> - WhisperX: `docker-compose.yml` → `AUDIO_FILE`
+| Setting | Faster Whisper | WhisperX |
+|---------|---------------|----------|
+| Audio file | `docker-compose.yml` → `AUDIO_FILE` | `docker-compose.yml` → `AUDIO_FILE` |
+| Model size | `run_diarization.py` → `model_size` | `docker-compose.yml` → `WHISPERX_MODEL` |
+| Language | `run_diarization.py` → `language` | `docker-compose.yml` → `LANGUAGE` |
+| Speakers | `docker-compose.yml` → `MIN/MAX_SPEAKERS` | `docker-compose.yml` → `MIN/MAX_SPEAKERS` |
+| Device | `run_diarization.py` → `device` | Auto-detected |
+| HF Token | `docker-compose.yml` or `.env` | `docker-compose.yml` or `.env` |
 
-> **Model size**
-> - Faster Whisper: `run_diarization.py` → `model_size`
-> - WhisperX: `docker-compose.yml` → `WHISPERX_MODEL`
+---
 
-> **Language**
-> - Faster Whisper: `run_diarization.py` → `language`
-> - WhisperX: `docker-compose.yml` → `LANGUAGE`
+## HuggingFace Token Setup
 
-> **Speaker count**
-> - Both: `docker-compose.yml` → `MIN_SPEAKERS` / `MAX_SPEAKERS`
-
-> **CPU vs GPU**
-> - Faster Whisper: `run_diarization.py` → `device`
-> - WhisperX: Automatic (needs GPU in container)
-
-> **Compute precision**
-> - Faster Whisper: `run_diarization.py` → `compute_type`
-> - WhisperX: Automatic
-
-> **HF token**
-> - Both: `docker-compose.yml` or shell export
+1. Create token: https://huggingface.co/settings/tokens
+2. Accept model terms:
+   - https://huggingface.co/pyannote/speaker-diarization-3.1
+   - https://huggingface.co/pyannote/segmentation-3.0
+3. Add to `.env`:
+   ```bash
+   HUGGINGFACE_HUB_TOKEN=hf_your_token_here
+   ```

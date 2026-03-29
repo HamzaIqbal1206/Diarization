@@ -40,10 +40,15 @@ wheels/
 
 # Output & Temporary
 pipelines/*/output/*.txt
+pipelines/*/output/progress*.json
 transcript_output/
 *.txt.save
 *.txt~
 diarized_transcript.txt
+
+# Results (transcribed files)
+results/*.txt
+results/progress*.json
 
 # Audio Files (too large)
 *.mp3

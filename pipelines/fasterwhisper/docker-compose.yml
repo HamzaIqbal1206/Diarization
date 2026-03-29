@@ -1,6 +1,6 @@
 services:
   diarization:
-    build: .
+    image: fasterwhisper-diarization:latest
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - AUDIO_FILE=${AUDIO_FILE:-/app/audio/sample3.mp3}
@@ -11,11 +11,11 @@ services:
       - HF_HOME=/app/.cache/huggingface
       - TORCH_HOME=/app/.cache/torch
     volumes:
-      # Relative paths (from pipelines/fasterwhisper/)
-      - ../../data/audio:/app/audio:ro
-      - ../../results:/app/results
-      # Model caches (both in project .cache directory)
-      - ../../.cache/huggingface:/app/.cache/huggingface
-      - ../../.cache/torch:/app/.cache/torch
+      # Support both direct host paths and relative paths
+      - ${AUDIO_PATH:-../../data/audio}:/app/audio:ro
+      - ${RESULTS_PATH:-../../results}:/app/results
+      # Model caches
+      - ${CACHE_PATH:-../../.cache}/huggingface:/app/.cache/huggingface
+      - ${CACHE_PATH:-../../.cache}/torch:/app/.cache/torch
     working_dir: /app
     command: python run_diarization.py

@@ -7,6 +7,7 @@ import shutil
 import uuid
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +44,12 @@ AUDIO_DIR = Path(os.environ.get("AUDIO_DIR", str(BASE_DIR / "data" / "audio")))
 PIPELINES_DIR = Path(os.environ.get("PIPELINES_DIR", str(PROJECT_ROOT / "pipelines")))
 RESULTS_DIR = Path(os.environ.get("RESULTS_DIR", str(PROJECT_ROOT / "results")))
 
+# Worker URL for persistent model service
+WORKER_URL = os.environ.get("WORKER_URL", "http://localhost:8001")
+
+# Host project path for Docker-in-Docker (when backend runs in container)
+HOST_PROJECT_PATH = os.environ.get("HOST_PROJECT_PATH", str(PROJECT_ROOT))
+
 ALLOWED_EXTENSIONS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".aiff"}
 
 # In-memory job store
@@ -50,9 +57,11 @@ jobs: dict[str, dict] = {}
 # In-memory batch store
 batches: dict[str, dict] = {}
 
-# No queuing - just run jobs directly
-# Retry runs 3 at a time
-RETRY_BATCH_SIZE = 3
+# Semaphore to limit concurrent jobs (1 at a time to avoid memory issues)
+job_semaphore = asyncio.Semaphore(1)
+
+# Retry runs 1 at a time
+RETRY_BATCH_SIZE = 1
 
 
 def read_progress(pipeline_name: str, job_id: str | None = None) -> dict | None:
@@ -187,16 +196,16 @@ async def upload_audio(file: UploadFile = File(...)):
 
 @app.post("/api/run")
 async def run_pipeline(config: dict):
-    """Start a diarization pipeline run."""
+    """Start a diarization pipeline run using the persistent worker."""
     logger.info(f"=== Starting pipeline run ===")
     logger.info(f"Config received: {config}")
 
     pipeline_name = config.get("pipeline", "fasterwhisper")
     audio_file = config.get("audioFile")
     language = config.get("language")
-    min_speakers = config.get("minSpeakers")
-    max_speakers = config.get("maxSpeakers")
-    hf_token = os.environ.get("HUGGINGFACE_HUB_TOKEN", "")
+    # Ensure min/max speakers are integers with defaults
+    min_speakers = int(config.get("minSpeakers") or 2)
+    max_speakers = int(config.get("maxSpeakers") or 2)
 
     if pipeline_name not in ("fasterwhisper", "whisperx"):
         raise HTTPException(status_code=400, detail="Invalid pipeline name")
@@ -208,32 +217,90 @@ async def run_pipeline(config: dict):
     if not audio_path.exists():
         raise HTTPException(status_code=404, detail=f"Audio file '{audio_file}' not found")
 
-    pipeline_dir = PIPELINES_DIR / pipeline_name
     job_id = str(uuid.uuid4())
     jobs[job_id] = {"status": "queued", "pipeline": pipeline_name, "audioFile": audio_file}
     logger.info(f"Created job: {job_id}")
 
-    # Run in background with semaphore
-    asyncio.create_task(_run_job(
-        job_id, pipeline_dir, audio_file, language, min_speakers, max_speakers, hf_token
+    # Run in background using worker
+    asyncio.create_task(_run_with_worker(
+        job_id, audio_file, language, min_speakers, max_speakers
     ))
 
     return {"jobId": job_id, "status": "queued"}
 
 
-async def _run_job(
+async def _run_with_worker(
     job_id: str,
-    pipeline_dir: Path,
     audio_file: str,
     language: str | None,
-    min_speakers: int | None,
-    max_speakers: int | None,
-    hf_token: str,
+    min_speakers: int,
+    max_speakers: int,
 ):
-    """Run a single job - no queuing, just run it."""
+    """Run job using persistent worker service."""
     jobs[job_id]["status"] = "running"
-    logger.info(f"[Job {job_id}] Started")
-    await _run_docker(job_id, pipeline_dir, audio_file, language, min_speakers, max_speakers, hf_token)
+    logger.info(f"[Job {job_id}] Sending to worker: {audio_file}")
+
+    # Worker has audio at /app/audio/, not /app/data/audio/
+    audio_path = f"/app/audio/{audio_file}"
+
+    try:
+        async with httpx.AsyncClient(timeout=600) as client:
+            # Build params, only include language if specified
+            params = {
+                "audio_path": audio_path,
+                "min_speakers": min_speakers,
+                "max_speakers": max_speakers,
+            }
+            if language:
+                params["language"] = language
+
+            # Submit job to worker
+            response = await client.post(
+                f"{WORKER_URL}/process-file",
+                params=params
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Worker error: {response.text}")
+
+            worker_job = response.json()
+            worker_job_id = worker_job["job_id"]
+            logger.info(f"[Job {job_id}] Worker job: {worker_job_id}")
+
+            # Poll for completion
+            while True:
+                await asyncio.sleep(2)
+                status_response = await client.get(f"{WORKER_URL}/jobs/{worker_job_id}")
+                if status_response.status_code != 200:
+                    raise Exception(f"Worker status error: {status_response.text}")
+
+                worker_status = status_response.json()
+
+                if worker_status["status"] == "completed":
+                    jobs[job_id] = {
+                        "status": "completed",
+                        "pipeline": jobs[job_id]["pipeline"],
+                        "audioFile": jobs[job_id]["audioFile"],
+                        "transcript": worker_status.get("transcript", ""),
+                        "segments": worker_status.get("segments", []),
+                        "outputFilename": worker_status.get("output_file", "").split("/")[-1] if worker_status.get("output_file") else f"{audio_file}_transcript.txt",
+                    }
+                    logger.info(f"[Job {job_id}] Completed via worker")
+                    break
+
+                elif worker_status["status"] == "failed":
+                    jobs[job_id]["status"] = "failed"
+                    jobs[job_id]["error"] = worker_status.get("error", "Unknown error")
+                    logger.error(f"[Job {job_id}] Worker failed: {worker_status.get('error')}")
+                    break
+
+                else:
+                    jobs[job_id]["status"] = worker_status["status"]
+
+    except Exception as e:
+        logger.exception(f"[Job {job_id}] Exception: {e}")
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
 
 
 async def _run_docker(
@@ -250,10 +317,32 @@ async def _run_docker(
 
     logger.info(f"[Job {job_id}] Starting Docker: {audio_file}")
 
+    # Determine if we're running inside Docker (HOST_PROJECT_PATH is set)
+    in_docker = bool(HOST_PROJECT_PATH and HOST_PROJECT_PATH != str(PROJECT_ROOT))
+
     env = os.environ.copy()
     env["HUGGINGFACE_HUB_TOKEN"] = hf_token
     env["JOB_ID"] = job_id
-    env["AUDIO_FILE"] = f"/app/audio/{audio_file}"
+
+    # Always use container path for reading docker-compose.yml
+    compose_file = str(pipeline_dir / "docker-compose.yml")
+
+    if in_docker:
+        # Use host paths for volume mounts in spawned containers
+        host_audio_dir = Path(HOST_PROJECT_PATH) / "data" / "audio"
+        host_results_dir = Path(HOST_PROJECT_PATH) / "results"
+        host_cache_dir = Path(HOST_PROJECT_PATH) / ".cache"
+
+        # AUDIO_FILE should be the container path (/app/audio/filename.mp3)
+        # not the host path, since the diarization container mounts the audio dir
+        env["AUDIO_FILE"] = f"/app/audio/{audio_file}"
+        env["AUDIO_PATH"] = str(host_audio_dir)
+        env["RESULTS_PATH"] = str(host_results_dir)
+        env["CACHE_PATH"] = str(host_cache_dir)
+    else:
+        # Running directly on host
+        env["AUDIO_FILE"] = f"/app/audio/{audio_file}"
+
     if language:
         env["LANGUAGE"] = language
     if min_speakers is not None:
@@ -264,7 +353,7 @@ async def _run_docker(
     cmd = [
         "docker", "compose",
         "-p", project_name,
-        "-f", str(pipeline_dir / "docker-compose.yml"),
+        "-f", compose_file,
         "up", "--abort-on-container-exit", "--remove-orphans",
     ]
 
@@ -471,23 +560,18 @@ async def _run_batch(
     max_speakers: int | None,
     hf_token: str,
 ):
-    """Run batch jobs - no queuing, run all in parallel."""
-    batch_lock = asyncio.Lock()
-
-    async def run_one(audio_file: str, job_id: str):
+    """Run batch jobs sequentially to avoid memory issues with model loading."""
+    for audio_file, job_id in file_job_ids.items():
         jobs[job_id]["status"] = "running"
         logger.info(f"[Batch {batch_id}] Starting {audio_file}")
         await _run_docker(job_id, pipeline_dir, audio_file, language, min_speakers, max_speakers, hf_token)
 
-        async with batch_lock:
-            if jobs[job_id]["status"] == "completed":
-                batches[batch_id]["completed"] += 1
-            else:
-                batches[batch_id]["failed"] += 1
-            _update_batch_status(batch_id)
+        if jobs[job_id]["status"] == "completed":
+            batches[batch_id]["completed"] += 1
+        else:
+            batches[batch_id]["failed"] += 1
+        _update_batch_status(batch_id)
 
-    tasks = [run_one(f, j) for f, j in file_job_ids.items()]
-    await asyncio.gather(*tasks)
     logger.info(f"[Batch {batch_id}] All jobs completed")
 
 

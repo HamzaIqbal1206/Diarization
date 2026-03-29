@@ -159,7 +159,7 @@ export class Dashboard implements OnInit, OnDestroy {
           },
         });
       });
-    }, 2000);
+    }, 500);
   }
 
   stopPolling() {

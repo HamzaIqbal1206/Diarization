@@ -6,10 +6,35 @@ services:
       - "8000:8000"
     environment:
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+      - HOST_PROJECT_PATH=/Users/mohammadhamzaiqbal/Documents/Diarization
+      - WORKER_URL=http://worker:8001
     volumes:
       - ./data:/app/data
       - ./pipelines:/app/pipelines
+      - ./results:/app/results
+      - ./.cache:/app/.cache
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app/project:ro
+    depends_on:
+      - worker
+
+  worker:
+    build: ./worker
+    container_name: diarization-worker
+    ports:
+      - "8001:8001"
+    environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+      - RESULTS_DIR=/app/results
+    volumes:
+      - ./data/audio:/app/audio:ro
+      - ./results:/app/results
+      - ./.cache/huggingface:/app/.cache/huggingface
+      - ./.cache/torch:/app/.cache/torch
+    deploy:
+      resources:
+        reservations:
+          memory: 8G
 
   frontend:
     image: node:20-alpine
